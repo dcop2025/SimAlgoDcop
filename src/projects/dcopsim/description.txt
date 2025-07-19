@@ -1,0 +1,17 @@
+Workspace for testing DCOP algorithms 2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+How to run:
+1. Select the algo to test (DSA, PDSA, MaxSum, PMaxSum)
+2. Click the play button
+
+How to config test params
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To change the  test configuration edit the function genTestConfiguration
+replace the configs[0] = new TestConfiguration(10, 10 , 0.4, 60000);
+with the following setting
+new TestConfiguration(<number of agent>, <domain size) , <network density>, <timeout in milliseconds>);
+
+
+
