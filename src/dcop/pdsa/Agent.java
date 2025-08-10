@@ -8,6 +8,10 @@ import java.util.Vector;
 
 import projects.dcopsim.IDcopAgent;
 import dcop.Problem.ConstraintsMatrix;
+import dcop.pdsa.contexts.PdsaRoundCtx;
+import dcop.pdsa.contexts.interfaces.IPdsaAgent;
+import crypto.mpc.barrier.OBarrierCtx;
+import crypto.mpc.barrier.OBarrierNotifyMsg;
 import crypto.mpc.interfaces.*;
 import crypto.mpc.testing.OTestCompareMPCCtx;
 import crypto.mpc.testing.OTestMultiplyMPCCtx;
@@ -18,11 +22,15 @@ import sinalgo.nodes.Node;
 import sinalgo.nodes.messages.Inbox;
 import sinalgo.nodes.messages.Message;
 import sinalgo.runtime.Global;
+import utils.*;
 
 public class Agent extends Node implements 
 	IDcopAgent, IShamirAgent, 
 	crypto.mpc.testing.OTestMultiplyMPCCtx.IContextOwner, 
-	crypto.mpc.testing.OTestCompareMPCCtx.IContextOwner {
+	crypto.mpc.testing.OTestCompareMPCCtx.IContextOwner,
+	dcop.pdsa.contexts.interfaces.IPdsaAgent,
+	dcop.pdsa.contexts.PdsaRoundCtx.IContextOwner,
+	crypto.mpc.barrier.OBarrierCtx.IContextOwner {
 		
 	@Override
     /**
@@ -114,6 +122,7 @@ public class Agent extends Node implements
 	// PDSA Internals //
 	////////////////////
 	private SharedStorage sharedStorage;
+	private OTicker ticker;
 	
 	public Shared storeShared(String key, Shared shared) {
 		return sharedStorage.put(key, shared);
@@ -155,6 +164,7 @@ public class Agent extends Node implements
 		this.prime = prime;
 		
 		sharedStorage = new SharedStorage();
+		ticker = new OTicker();
 		setup();
 		
 		this.constraints = new HashMap<Integer, int[][]>();
@@ -190,8 +200,9 @@ public class Agent extends Node implements
      * @param enable - indicates if to output the log string 
      * @param logStr - the log string 
      */
-	private void debug(boolean flag, String format, Object... args) {
-		Global.log.logln(flag, "ID:" + ID + " " + String.format(format, args));
+	@Override
+	public void debug(boolean flag, String format, Object... args) {
+		Global.log.logln(flag || this.debug, "ID:" + ID + " " + String.format(format, args));
 	}
 	
 	// COP info
@@ -294,36 +305,7 @@ public class Agent extends Node implements
 			}
 		}
 	}
-	
-	private void StartPDSA() {
-		debug(debug, "Starting PDSA algo");
-		setup();
-		triggerPDSA = false;
-		runningPDSA = true;
-		
-		// select init value
-		xIndex = algoRandom.nextInt(domainPower);
-		debug(debug, "Init value %d", xIndex);
-	}
 
-	public void trigger() {
-		triggerPDSA = true;
-	}
-	
-	public void triggerCommand(String command) {
-		// only the first agent answer the call
-		if (agentID() != 1) {
-			return;
-		}
-		
-		triggerCommand = true;
-	}
-
-
-	public void InjectRef(String refKey, Shared ref, Shared refBits[]) {
-		sharedStorage.InjectRef(refKey, ref, refBits);
-	}
-	
 	public void installConstraintsMatrix(ConstraintsMatrix Constraints) {
 		// TODO Auto-generated method stub
 		
@@ -340,18 +322,16 @@ public class Agent extends Node implements
 
 
 	public void logState() {
-		// TODO Auto-generated method stub
-		
+		DebugCOPInfo(true);		
 	}
 
 	public int assignment() {
-		// TODO Auto-generated method stub
-		return 0;
+		return xIndex;
 	}
 
 	public int getInternal(String key) {
-		// TODO Auto-generated method stub
-		return 0;
+		// TODO write a better function that return value by the key
+		return round;
 	}
 
 	public void connect(IDcopAgent other) {
@@ -359,15 +339,130 @@ public class Agent extends Node implements
 		
 	}
 
+	public void trigger() {
+		triggerPDSA = true;
+	}
+	
+	private void StartPDSA() {
+		debug = (ID == 1);
+		debug(debug, "Starting PDSA algo");
+		setup();
+		triggerPDSA = false;
+		runningPDSA = true;
+		
+		shamirThreshold = (int) Math.floor((double)(neighbors.size()+1)/2);
+		
+		// select init value
+		xIndex = algoRandom.nextInt(domainPower);
+		debug(debug, "Init value %d", xIndex);
+		startRound();
+	}
+
+	private void startRound() {
+		contextMgr.clear();
+		sharedStorage.clear(false);
+		OBarrierCtx barrierCtx = new OBarrierCtx(String.format("round-%d", round), neighbors.size()+1, this);
+		storeContext(barrierCtx.contextKey(), barrierCtx);
+		PdsaRoundCtx roundCtx = new PdsaRoundCtx(String.format("round-%d", round), round, this);
+		storeContext(roundCtx.contextKey(), roundCtx);
+		roundCtx.startNewRound();		
+	}
+	
 	public boolean doneStatus() {
-		// TODO Auto-generated method stub
-		return !runningCommand;
+		// TODO fix the logic here
+		//return !runningCommand;
+		return !runningPDSA;
 	}
 
 	public int agentID() {
-		// TODO Auto-generated method stub
 		return ID;
 	}
+
+	
+	@Override
+	public IShamirAgent agnet() {
+		return this;
+	}
+
+	@Override
+	public boolean ticker(String tickerKey, int goal) {
+		return ticker(tickerKey, goal);
+	}
+
+	@Override
+	public int xIndex() {
+		return xIndex;
+	}
+
+	@Override
+	public Random cryptoRandom() {
+		return cryptoRandom;
+	}
+
+	@Override
+	public Random algoRandom() {
+		return algoRandom;
+	}
+
+	@Override
+	public int[][] constraints(int targetID) {
+		return constraints.get(targetID);
+	}
+
+	@Override
+	public double roundThreshold() {
+		return roundThreshold;
+	}
+
+	@Override
+	public int domainPower() {
+		return domainPower;
+	}
+
+	@Override
+	public IPdsaAgent pdsaAgnet() {
+		return this;
+	}
+
+	@Override
+	public void roundDone(String key) {
+		// TODO wait for new round
+		OBarrierNotifyMsg msg = new OBarrierNotifyMsg(String.format("round-%d", round));
+		this.BroadcastMsg(msg);
+	}
+
+	@Override
+	public void barrier(String key) {
+		// P2 need to check the the context is the context of round done
+		// start a new round
+		round++;
+		startRound();
+	}
+
+	
+	@Override
+	public void setIndex(int newX) {
+		xIndex = newX;		
+	}
+	
+	////////////////////////////////////////////////////////////////
+	// add the code below here is for testing need to move it out
+	
+	
+	public void triggerCommand(String command) {
+		// only the first agent answer the call
+		if (agentID() != 1) {
+			return;
+		}
+		
+		triggerCommand = true;
+	}
+
+
+	public void InjectRef(String refKey, Shared ref, Shared refBits[]) {
+		sharedStorage.InjectRef(refKey, ref, refBits);
+	}
+	
 		
 	public void testMultiFlow() {
 		// Inject first 
@@ -441,9 +536,4 @@ public class Agent extends Node implements
 		runCmpTest();
 	}
 
-	@Override
-	public IShamirAgent agnet() {
-		// TODO Auto-generated method stub
-		return this;
-	}
 }

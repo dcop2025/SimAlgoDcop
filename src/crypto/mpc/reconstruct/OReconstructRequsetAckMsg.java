@@ -1,4 +1,4 @@
-package crypto.mpc.testing;
+package crypto.mpc.reconstruct;
 
 import crypto.mpc.interfaces.*;
 

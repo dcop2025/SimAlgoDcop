@@ -394,13 +394,10 @@ public class CustomGlobal extends AbstractCustomGlobal{
 	}
 	
 	private boolean testTimeout() {
-		return false;
-		/*
 		long endTime = System.currentTimeMillis();
         long duration = endTime - startTime; // Time in milliseconds
 
         return (currentConfiguration.durtion < duration);
-        */
 	}
 	
 	private void updateStats(long duration) {

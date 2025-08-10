@@ -1,0 +1,4 @@
+static final String wb_i_key = "wb-"; \
+	wb-<agnet-owner>-<index: size of the agnet's domain constrains>
+static final String ki_key = "k-";
+	static final String wi_key = "w-";
