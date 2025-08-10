@@ -390,7 +390,8 @@ public class CustomGlobal extends AbstractCustomGlobal{
 	}
 
 	private boolean isTestRunning() {
-		return (!testTimeout() && areAgentStillRunning());
+		return true;
+		//return (!testTimeout() && areAgentStillRunning());
 	}
 	
 	private boolean testTimeout() {

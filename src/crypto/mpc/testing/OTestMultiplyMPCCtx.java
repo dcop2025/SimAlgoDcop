@@ -121,7 +121,7 @@ public class OTestMultiplyMPCCtx implements
 				aKey, bKey, cKey,
 				this);
 		this.agent.storeContext(ctx.contextKey(), ctx);
-		ctx.init();
+		ctx.action();
 		
 	}
 	
