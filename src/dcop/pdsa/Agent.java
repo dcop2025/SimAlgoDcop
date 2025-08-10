@@ -13,6 +13,7 @@ import dcop.pdsa.contexts.interfaces.IPdsaAgent;
 import crypto.mpc.barrier.OBarrierCtx;
 import crypto.mpc.barrier.OBarrierNotifyMsg;
 import crypto.mpc.interfaces.*;
+import crypto.mpc.testing.OTestCmpZeroCtx;
 import crypto.mpc.testing.OTestCompareMPCCtx;
 import crypto.mpc.testing.OTestMultiplyMPCCtx;
 import crypto.utils.shamir.Shared;
@@ -28,6 +29,7 @@ public class Agent extends Node implements
 	IDcopAgent, IShamirAgent, 
 	crypto.mpc.testing.OTestMultiplyMPCCtx.IContextOwner, 
 	crypto.mpc.testing.OTestCompareMPCCtx.IContextOwner,
+	crypto.mpc.testing.OTestCmpZeroCtx.IContextOwner,
 	dcop.pdsa.contexts.interfaces.IPdsaAgent,
 	dcop.pdsa.contexts.PdsaRoundCtx.IContextOwner,
 	crypto.mpc.barrier.OBarrierCtx.IContextOwner {
@@ -287,7 +289,7 @@ public class Agent extends Node implements
 
 
 	public void handleMsg(Node sender, OMessage m) {
-		debug(false, "got " + m.getClass() + " from: " + sender.ID);
+		//debug(false, "got " + m.getClass() + " from: " + sender.ID);
 		m.action(this, sender);
 	}
 
@@ -489,6 +491,18 @@ public class Agent extends Node implements
 		cmpTestCtx.action();		
 	}
 	
+	private void runCmpZeroTest( ) {
+		sharedStorage.clear(false);
+		constraints.clear();
+		String ctxName = "cmp-test";
+		OTestCmpZeroCtx cmpTestCtx = new OTestCmpZeroCtx(
+				ctxName, 
+				a,
+				this);
+		contextMgr.put(cmpTestCtx.contextKey(), cmpTestCtx);
+		cmpTestCtx.action();			
+	}
+	
 	private void runCommand() {		
 		triggerCommand = false;
 		runningCommand = true;
@@ -517,7 +531,9 @@ public class Agent extends Node implements
 		
 		a = 0;
 		b = 0;
-		runCmpTest();
+		//runCmpTest();
+		runCmpZeroTest();
+		
 	}
 
 	public void multiplyTestOver(String contextKey) {
@@ -534,6 +550,21 @@ public class Agent extends Node implements
 			}
 		}
 		runCmpTest();
+	}
+	
+	public void cmpTestOver(String contextKey, long value) {
+		debug(true, ">>>>>> value: %d: %d", a, value);
+		if ((a > 0) && (value != 0)) {
+			Shared z = shared("dfadsfas");
+			z.real();
+		}
+		a++;
+		runCmpZeroTest();
+	}
+
+	@Override
+	public IShamirAgent me() {
+		return this;
 	}
 
 }

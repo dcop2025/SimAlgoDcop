@@ -101,7 +101,7 @@ public class OSecureLSBCtx implements IContext, crypto.mpc.multiply.OSecureMulti
 					bitKey(contextKey+"-c", index), bitKey(contextKey+"-d", index+1), bitKey(contextKey+"-cd", index),
 					this);
 			this.agent.storeContext(dCtx.contextKey(), dCtx);
-			dCtx.init();
+			dCtx.action();
 
 		}
 	}
@@ -118,7 +118,7 @@ public class OSecureLSBCtx implements IContext, crypto.mpc.multiply.OSecureMulti
 					contextKey+"-e", contextKey+"-1-ea", contextKey+"-f",
 					this);
 			this.agent.storeContext(dCtx.contextKey(), dCtx);
-			dCtx.init(); 
+			dCtx.action(); 
 		} else {
 			index--;			
 			OCalcBWCPhase1Msg msg = new OCalcBWCPhase1Msg(
@@ -166,7 +166,7 @@ public class OSecureLSBCtx implements IContext, crypto.mpc.multiply.OSecureMulti
 					contextKey+"-f", bitKey(contextKey+"-d", 0), contextKey+"-ed0",
 					this);
 			this.agent.storeContext(dCtx.contextKey(), dCtx);
-			dCtx.init();			
+			dCtx.action();			
 			return;
 		}
 		if (key.equals(String.format("%s-ed0", contextKey))) {

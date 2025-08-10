@@ -42,17 +42,8 @@ public class OSecureMultiplyCtx implements IContext {
 		this.agent = owner.agnet();
 	}
 	
-	public void action() {
-		switch (this.state) {
-	    case INIT:
-	    	init();	    	
-	        break;
-	    default:
-	    	noAction();
-		}
-	}
 		
-	public void init() {
+	public void action() {
 		
 		collected = new Vector<Shared>();
 		// Send a mutli requset message to eveyone
