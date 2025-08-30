@@ -7,7 +7,7 @@ public class OSecureCompareCtx implements IContext, crypto.mpc.compare.OSecureCo
 
 	public interface IContextOwner {
 		IShamirAgent agnet();
-		void compareDone(String key);
+		void compareDone(String key, int expected);
 	}
 	
 	 enum zstate {
@@ -27,11 +27,13 @@ public class OSecureCompareCtx implements IContext, crypto.mpc.compare.OSecureCo
 	
 	private String aSbKey;
 	private String yContextKey;
+	
+	private int expected;
 
 	
 	private int subAck;
 
-	public OSecureCompareCtx(String contextKey, String aKey, String bKey, String oKey, IContextOwner owner) {
+	public OSecureCompareCtx(String contextKey, String aKey, String bKey, String oKey, int expected, IContextOwner owner) {
 		this.contextKey = contextKey;
 		this.aKey = aKey;
 		this.bKey = bKey;
@@ -39,6 +41,8 @@ public class OSecureCompareCtx implements IContext, crypto.mpc.compare.OSecureCo
 		
 		this.owner = owner;
 		this.agent = owner.agnet();
+		this.expected = expected;
+		
 		
 		this.aSbKey = String.format("%s-%s", aKey, bKey);
 		this.yContextKey = String.format("%s-%s-y", contextKey, aSbKey);
@@ -91,7 +95,7 @@ public class OSecureCompareCtx implements IContext, crypto.mpc.compare.OSecureCo
 	public void compareHalfPrimeDone(String key) {
 		// the result should be 1-compare-half-prime, but no real need to do it, as it cancled
 		// by not doing it in the LSB as well.
-		owner.compareDone(contextKey);
+		owner.compareDone(contextKey, expected);
 	}
 
 
@@ -100,6 +104,6 @@ public class OSecureCompareCtx implements IContext, crypto.mpc.compare.OSecureCo
 		if (subAck != 0) {
 			return;
 		}
-		owner.compareDone(this.contextKey);
+		owner.compareDone(this.contextKey, expected);
 	}
 }

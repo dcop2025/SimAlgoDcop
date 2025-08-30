@@ -94,12 +94,13 @@ public class CustomGlobal extends AbstractCustomGlobal{
 	// SEEDs
 	public static final long INIT_PG_SEED      = 1001L; // Seed to problem generator
 	public static final long INIT_NETWORD_SEED = 2001L; // Seed to network generator
-	public static final long INIT_ALGO_SEED    = 3001L; // Seed to pass for an agent for algorithm operations
+	public static final long INIT_ALGO_SEED    = 3002L; // Seed to pass for an agent for algorithm operations
 	public static final long INIT_CRYPTO_SEED  = 4001L; // Seed to pass for an agent for crypto operations
 	
 	
 	// Test configuration default values
-	public static final int  INIT_TOTAL_TEST_ITERATIONS = 50; // Default value for number of iterations
+	//public static final int  INIT_TOTAL_TEST_ITERATIONS = 50; // Default value for number of iterations
+	public static final int  INIT_TOTAL_TEST_ITERATIONS = 1; // Default value for number of iterations
 	
 	// test durations 
 	public static final int  ONE_MIN    =  60000;
@@ -141,7 +142,7 @@ public class CustomGlobal extends AbstractCustomGlobal{
 
 	private TestConfiguration getTestConfiguration(int testIteration) {
 		if (testIteration == 0) {
-			return new TestConfiguration(10, 10 , 0.4, ONE_MIN);	
+			return new TestConfiguration(10, 5 , 0.4, ONE_MIN);	
 		}
 		return null;
 	}

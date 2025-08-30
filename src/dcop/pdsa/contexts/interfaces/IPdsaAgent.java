@@ -6,6 +6,7 @@ import crypto.mpc.interfaces.IShamirAgent;
 
 public interface IPdsaAgent extends IShamirAgent, ITicker {
 	int xIndex();
+	void setXIndex(int x);
 	Random cryptoRandom();
 	Random algoRandom();
 	int shamirThreshold();

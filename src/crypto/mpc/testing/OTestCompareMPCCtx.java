@@ -116,7 +116,7 @@ public class OTestCompareMPCCtx implements
 		// Now we are ready for the do the compare, let's create a context for it
 		OSecureCompareCtx ctx = new OSecureCompareCtx(
 				String.format("cmp-%s-%s", contextKey, cKey),
-				aKey, bKey, cKey,
+				aKey, bKey, cKey, 0,
 				this);
 		this.agent.storeContext(ctx.contextKey(), ctx);
 		ctx.init();		
@@ -142,7 +142,7 @@ public class OTestCompareMPCCtx implements
 		owner.compareTestOver(contextKey);
 	}
 
-	public void compareDone(String key) {
+	public void compareDone(String key, int expected) {
 		OReconstructRequsetMsg reconstructMsg = new OReconstructRequsetMsg(this.contextKey, cKey);
 		requestCounter = agent.networkSize();
 		agent.BroadcastMsg(reconstructMsg);				

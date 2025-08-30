@@ -26,7 +26,7 @@ import sinalgo.runtime.Global;
 import utils.*;
 
 public class Agent extends Node implements 
-	IDcopAgent, IShamirAgent, 
+	IDcopAgent, IShamirAgent,
 	crypto.mpc.testing.OTestMultiplyMPCCtx.IContextOwner, 
 	crypto.mpc.testing.OTestCompareMPCCtx.IContextOwner,
 	crypto.mpc.testing.OTestCmpZeroCtx.IContextOwner,
@@ -363,9 +363,9 @@ public class Agent extends Node implements
 	private void startRound() {
 		contextMgr.clear();
 		sharedStorage.clear(false);
-		OBarrierCtx barrierCtx = new OBarrierCtx(String.format("round-%d", round), neighbors.size()+1, this);
+		OBarrierCtx barrierCtx = new OBarrierCtx(String.format("b-round-%d", round), neighbors.size()+1, this);
 		storeContext(barrierCtx.contextKey(), barrierCtx);
-		PdsaRoundCtx roundCtx = new PdsaRoundCtx(String.format("round-%d", round), round, this);
+		PdsaRoundCtx roundCtx = new PdsaRoundCtx(String.format("pdsa-round-%d", round), round, this);
 		storeContext(roundCtx.contextKey(), roundCtx);
 		roundCtx.startNewRound();		
 	}
@@ -388,7 +388,7 @@ public class Agent extends Node implements
 
 	@Override
 	public boolean ticker(String tickerKey, int goal) {
-		return ticker(tickerKey, goal);
+		return ticker.ticker(tickerKey, goal);
 	}
 
 	@Override
@@ -396,6 +396,10 @@ public class Agent extends Node implements
 		return xIndex;
 	}
 
+	public void setXIndex(int x) {
+		xIndex = x;
+	}
+	
 	@Override
 	public Random cryptoRandom() {
 		return cryptoRandom;
@@ -429,14 +433,16 @@ public class Agent extends Node implements
 	@Override
 	public void roundDone(String key) {
 		// TODO wait for new round
-		OBarrierNotifyMsg msg = new OBarrierNotifyMsg(String.format("round-%d", round));
+		OBarrierNotifyMsg msg = new OBarrierNotifyMsg(String.format("b-round-%d", round));
 		this.BroadcastMsg(msg);
+		
 	}
 
 	@Override
 	public void barrier(String key) {
 		// P2 need to check the the context is the context of round done
 		// start a new round
+		debug(true, "moving to the next round");
 		round++;
 		startRound();
 	}
@@ -444,6 +450,7 @@ public class Agent extends Node implements
 	
 	@Override
 	public void setIndex(int newX) {
+		debug(true, "the new index is %d", newX);
 		xIndex = newX;		
 	}
 	
@@ -516,23 +523,25 @@ public class Agent extends Node implements
 		// tasks
 		// 1. create a blank context for testing multi
 		// 2. add the context to the context bank
-/*
+
+		a = 16;
+		b = 47;
 		String ctxName = "multiply-test"; 
 		OTestMultiplyMPCCtx multiplyTest = new OTestMultiplyMPCCtx(
 				ctxName, 
 				this,
-				"key-a", 16,
-				"key-b", 47, 
+				"key-a", a,
+				"key-b", b, 
 				"key-c" 
 				);
 		contextMgr.put(multiplyTest.contextKey(), multiplyTest);
 		multiplyTest.action();
-*/
+
 		
-		a = 0;
-		b = 0;
+		//a = 0;
+		//b = 0;
 		//runCmpTest();
-		runCmpZeroTest();
+		//runCmpZeroTest();
 		
 	}
 

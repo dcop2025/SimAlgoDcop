@@ -12,6 +12,7 @@ import crypto.mpc.sub.OSecureKnownSubCtx;
 import crypto.mpc.sub.OSecureSubCtx;
 import crypto.utils.shamir.Shared;
 import crypto.utils.shamir.VectorGenerater;
+import dcop.pdsa.OKeyNamer;
 import dcop.pdsa.contexts.interfaces.IPdsaAgent;
 import dcop.pdsa.contexts.messages.ConstrainsRowSharingMsg;
 
@@ -24,12 +25,9 @@ public class PdsaRoundCtx implements
 			crypto.mpc.add.OSecureAddCtx.IContextOwner,
 			crypto.mpc.reconstruct.OReconstructCtx.IContextOwner {
 	
-	static final String wb_i_key = "wb";
-	static final String ki_key = "k-";
-	static final String wi_key = "w-";
-	static final String beta_key = "beta-";
-	static final String gamma_key = "gamma-";
-	static final String delta_key = "delta-";
+//	static final String beta_key = "beta-";
+//	static final String gamma_key = "gamma-";
+//	static final String delta_key = "delta-";
 
 	public interface IContextOwner {
 		IPdsaAgent pdsaAgnet();
@@ -50,6 +48,10 @@ public class PdsaRoundCtx implements
 		this.me = owner.pdsaAgnet();
 		this.contextKey = contextKey;
 		this.round = round;		
+		
+		debug = (me.agentID() == 1);
+		
+		me.debug(debug, "context key %s", this.contextKey);
 	}
 	
 
@@ -72,7 +74,7 @@ public class PdsaRoundCtx implements
 	}
 	
 	public void sendSelectedVectorToTarget(int targetID) {
-		me.debug(debug, "sending shareds to taget %d", targetID);
+		me.debug(debug, "sending shareds on taget %d", targetID);
 
 		int xIndex = me.xIndex();
 		int[][] constraints = me.constraints(targetID);
@@ -80,44 +82,44 @@ public class PdsaRoundCtx implements
 			// set vector to zero
 		}
 		int[] vector = Arrays.copyOf(constraints[xIndex], constraints[xIndex].length);
-
+		waiters = 0;
 		// Create a secret generator
 		VectorGenerater vGen = new VectorGenerater(vector, me.shamirThreshold(), me.prime(), me.cryptoRandom());
 		for (int otherID : me.ids()) {
 			Shared[] shareds = vGen.generate(otherID);
-			ConstrainsRowSharingMsg msg = new ConstrainsRowSharingMsg(me.agentID(), otherID, round, shareds, contextKey);
-			me.SendMsg(otherID, msg);
+			ConstrainsRowSharingMsg msg = new ConstrainsRowSharingMsg(me.agentID(), targetID, round, shareds, contextKey);
 			waiters++;
+			me.debug(debug, "sending shareds on taget %d to %d", targetID, otherID);
+			me.SendMsg(otherID, msg);			
 		}
 
 		Shared[] shareds = vGen.generate(me.agentID());
 		ConstrainsRowSharingMsg msg = new ConstrainsRowSharingMsg(me.agentID(), targetID, round, shareds, contextKey);
-		me.SendMsg(me.agentID(), msg);
 		waiters++;
+		me.debug(debug, "sending shareds on taget %d to %d", targetID, me.agentID());
+		me.SendMsg(me.agentID(), msg);
+		
 
 	}
 	
-	public void handleReadyToAssist() {
+	public void handleReadyToAssist(int senderId) {		
 		waiters--;
+		me.debug(debug, String.format("got ready to assist message from %d waiter %d", senderId, waiters));
 		if (waiters != 0) {
 			return;
 		}
 		kickStartEvaluateNewValue();		
 	}	
-	
-	private void kickStartReconstruct() {
-		// TODO code this
-	}
-	
+		
 	private void finishRound( ) {
-		// TODO code this
+		owner.roundDone(contextKey);
 	}
 	
 	private void kickStartEvaluateNewValue() {
 		boolean skipRound = (me.roundThreshold() < me.algoRandom().nextFloat());
 		if (skipRound) {
 			// if skipping round, simply start a new round
-			me.debug(false, "skipping round");
+			me.debug(debug, "skipping round");
 			finishRound();
 			return;
 		}
@@ -133,44 +135,54 @@ public class PdsaRoundCtx implements
 		evaluateIndexPhase1();
 	}
 	private void evaluateIndexPhase1() { 		
-		me.debug(false, "Evaluating vs index: " + u);
+		me.debug(debug, "Evaluating vs index: " + u);
 		if (u == me.domainPower()) {
-			me.debug(false, "Done evaluating, reconstructing");
-			kickStartReconstruct();
+			me.debug(debug, "Done evaluating, reconstructing");
+			reconstructK();
 			return;
 		}
 		// Send a compare request msg to everyone
-		String rightKey = wb_i_key + me.agentID() + "-" + u;
-		String leftKey = wi_key + me.agentID();
-		String betaKey = beta_key + me.agentID();		
-		me.debug(false, "broadcasting to compare for agent " + me.agentID() + " u: " + u);
+		//String rightKey = wb_i_key + me.agentID() + "-" + u;
+		//String leftKey = wi_key + me.agentID();
+		String wbKey = OKeyNamer.WbIndex(me.agentID(), u);
+		String wKey = OKeyNamer.w(me.agentID());
+		String betaKey = OKeyNamer.beta(me.agentID());		
+		String kKey = OKeyNamer.k(me.agentID());
 		
+	
 		// start for debug
-		Shared left = me.shared(leftKey);
-		if (left == null) {
+		Shared wb = me.shared(wbKey);
+		if (wb == null) {
 			// Log error
-			me.debug(true, "ERROR: Didn't find " + leftKey + " in agent " + me.agentID());
+			me.debug(true, "ERROR: Didn't find " + wbKey + " in agent " + me.agentID());
 		} 
-		Shared right = me.shared(rightKey);
-		if (right == null) {
+		Shared w = me.shared(wKey);
+		if (w == null) {
 			// Log error
-			me.debug(true, "ERROR: Didn't find " + rightKey + " in agent " + me.agentID());
+			me.debug(true, "ERROR: Didn't find " + wbKey + " in agent " + me.agentID());
 		} 
 
-		int res = left.real() > right.real() ? 1 : 0;
+		int res = wb.real() < w.real() ? 1 : 0;
+
+		// debug
+		me.debug(debug, "broadcasting to compare for agent %d| w %d, wb %d", me.agentID(), w.real(), wb.real());
+		Shared k = me.shared(kKey);
+		me.debug(debug, "broadcasting to compare for agent %d| k %d, u %d", me.agentID(), k.real(), u);
+		// debug
+		
 		cmpReady = false;
-		OSecureCompareCtx compareCtx = new OSecureCompareCtx(String.format("%s-cmp", contextKey), rightKey, leftKey, betaKey, this);
+		OSecureCompareCtx compareCtx = new OSecureCompareCtx(String.format("%s-cmp-%d", contextKey, me.agentID()), wbKey, wKey, betaKey, res, this);
 		me.storeContext(compareCtx.contextKey(), compareCtx);
 		compareCtx.init();
 		
 		// in parallel calc w_i(u) - w_i
 		subReadyCounter = 0;
-		OSecureSubCtx subCtx = new OSecureSubCtx(String.format("%s-wsub", contextKey), leftKey, rightKey, String.format("%s-wsub", contextKey), this);
+		OSecureSubCtx subCtx = new OSecureSubCtx(String.format("%s-wsub", contextKey), wbKey, wKey, OKeyNamer.gammaSub(me.agentID()), this);
 		me.storeContext(subCtx.contextKey(), subCtx);
 		subCtx.action();
 
-		// and calc in parallel we could sub for w_i(u) - w_i
-		OSecureKnownSubCtx kSubCtx = new OSecureKnownSubCtx(String.format("%s-ksub", contextKey), u, leftKey, String.format("%s-ksub", contextKey), this);
+		// and calc in parallel we could sub for u - k
+		OSecureKnownSubCtx kSubCtx = new OSecureKnownSubCtx(String.format("%s-ksub", contextKey), u, kKey, OKeyNamer.deltaSub(me.agentID()), this);
 		me.storeContext(kSubCtx.contextKey(), kSubCtx);
 		kSubCtx.action();		
 	}
@@ -184,12 +196,14 @@ public class PdsaRoundCtx implements
 
 
 	@Override
-	public void compareDone(String key) {
+	public void compareDone(String key, int expected) {
+		me.debug(debug, "compare done: %d, expected %d", u, expected);
 		cmpReady = true;
 		evaluateIndexPhase2();
 	}
 
 	public void subDone(String contextKey) {
+		//me.debug(debug, "sub done: u %d counter %d", u, subReadyCounter);
 		subReadyCounter++;
 		evaluateIndexPhase2();
 	}
@@ -204,14 +218,20 @@ public class PdsaRoundCtx implements
 			return;			
 		}
 		
-		multiReadyCounter = 0;
-		String betaKey = beta_key + me.agentID();
+		me.debug(debug, "starting eve phase 2 u: %d", u);
 		
-		OSecureMultiplyCtx multiGamma = new OSecureMultiplyCtx(String.format("%s-gamma", contextKey), betaKey, String.format("%s-wsub", contextKey), String.format("%s-gamma", contextKey), this);
+		multiReadyCounter = 0;
+		// debug point
+		String betaKey = OKeyNamer.beta(me.agentID());
+		Shared beta = me.shared(betaKey);
+		me.debug(debug, "beta key %s c %d", betaKey, beta.real());
+		
+		
+		OSecureMultiplyCtx multiGamma = new OSecureMultiplyCtx(String.format("%s-gamma", contextKey), betaKey, OKeyNamer.gammaSub(me.agentID()), OKeyNamer.gamma(me.agentID()), this);
 		me.storeContext(multiGamma.contextKey(), multiGamma);
 		multiGamma.action();
 		
-		OSecureMultiplyCtx multiDelta = new OSecureMultiplyCtx(String.format("%s-delta", contextKey), betaKey, String.format("%s-wsub", contextKey), String.format("%s-delta", contextKey), this);
+		OSecureMultiplyCtx multiDelta = new OSecureMultiplyCtx(String.format("%s-delta", contextKey), betaKey, OKeyNamer.deltaSub(me.agentID()), OKeyNamer.delta(me.agentID()), this);
 		me.storeContext(multiDelta.contextKey(), multiDelta);
 		multiDelta.action();
 	}
@@ -224,23 +244,33 @@ public class PdsaRoundCtx implements
 	private int addReadyCounter = 0;
 	
 	public void evaluateIndexPhase3() {
+		me.debug(debug, "multi done: u %d counter %d", u, multiReadyCounter);
 		if (multiReadyCounter != 2) {
 			return;
 		}
-		multiReadyCounter = 0;
+		multiReadyCounter = 0;		
+		
 		
 		addReadyCounter = 0;
-		String wiKey = wi_key + me.agentID();
+		//String wiKey = wi_key + "-" + me.agentID();		
+		//String ki = ki_key + "-" + me.agentID();
+		String wiKey = OKeyNamer.w(me.agentID());		
+		String ki = OKeyNamer.k(me.agentID());
 		
-		String ki = ki_key + me.agentID();
+		// debug
+		Shared gamma = me.shared(OKeyNamer.gamma(me.agentID()));
+		Shared delta = me.shared(OKeyNamer.delta(me.agentID()));
+		me.debug(debug, "gamma %d delta %d", gamma.real(), delta.real());
 		
-		OSecureAddCtx wAddCtx = new OSecureAddCtx(String.format("%s-addw", contextKey), wiKey, String.format("%s-gamma", contextKey), wiKey, this);
+		// debug
+		
+		OSecureAddCtx wAddCtx = new OSecureAddCtx(String.format("%s-addw", contextKey), wiKey, OKeyNamer.gamma(me.agentID()), wiKey, this);
 		me.storeContext(wAddCtx.contextKey(), wAddCtx);
 		wAddCtx.action();
 		
-		OSecureAddCtx kAddCtx = new OSecureAddCtx(String.format("%s-addw", contextKey), ki, String.format("%s-delta", contextKey), ki, this);
-		me.storeContext(wAddCtx.contextKey(), wAddCtx);
-		wAddCtx.action();
+		OSecureAddCtx kAddCtx = new OSecureAddCtx(String.format("%s-addk", contextKey), ki, OKeyNamer.delta(me.agentID()), ki, this);
+		me.storeContext(kAddCtx.contextKey(), kAddCtx);
+		kAddCtx.action();
 			
 	}
 	
@@ -251,27 +281,29 @@ public class PdsaRoundCtx implements
 	}
 	
 	private void evaluateIndexPhase4( ) {
+		me.debug(debug, "add done: u %d counter %d", u, addReadyCounter);
 		if (addReadyCounter != 2) {
 			return;
 		}
-		if (u == me.domainPower()) {
-			reconstructK();
-			return;
-		}
+		//if (u == me.domainPower()) {
+		//	reconstructK();
+		//	return;
+		//}
 		u++; 
 		evaluateIndex();
 	}
 	
 	private void reconstructK() {
-		String ki = ki_key + me.agentID();
+		String ki = OKeyNamer.k(me.agentID());
 		OReconstructCtx kReconstructCtx = new OReconstructCtx(String.format("%s-kreconstruct", contextKey),ki, this);
 		me.storeContext(kReconstructCtx.contextKey(), kReconstructCtx);
 		kReconstructCtx.action();				
 	}
 	
 	public void reconstructDone(String contextKey, long value) {
+		me.debug(debug, "the new k is %d", value);
 		owner.setIndex((int)value);
-		owner.roundDone(contextKey);
+		finishRound();
 	}
 	
 }

@@ -27,7 +27,7 @@ public class OSubKnownRequsetMsg implements IMessage{
 		Shared o = a.sub(b, prime);
 		me.storeShared(oKey,  o);
 		
-		OSubRequsetAckMsg ackMsg = new OSubRequsetAckMsg(contextKey);
+		OSubKnownRequsetAckMsg ackMsg = new OSubKnownRequsetAckMsg(contextKey);
 		me.SendMsg(senderID, ackMsg);		
 	}
 

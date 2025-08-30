@@ -52,6 +52,5 @@ public class SharedStorage {
 	static public String bitKey(String key, int index) {
 		return String.format("%s(%d)", key, index);
 	}
-
 }
 

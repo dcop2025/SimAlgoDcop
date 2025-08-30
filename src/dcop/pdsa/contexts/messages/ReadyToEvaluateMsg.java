@@ -19,7 +19,7 @@ public class ReadyToEvaluateMsg implements IMessage {
 		IContext dummy = agent.context(contextKey);
 		PdsaRoundCtx ctx = (PdsaRoundCtx) dummy;
 	
-		ctx.handleReadyToAssist();
+		ctx.handleReadyToAssist(senderID);
 	}
 
 	public IMessage clone( ) {
