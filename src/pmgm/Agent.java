@@ -1,4 +1,4 @@
-package dcop.pdsa;
+package pmgm;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -10,6 +10,7 @@ import projects.dcopsim.IDcopAgent;
 import dcop.Problem.ConstraintsMatrix;
 import dcop.pdsa.contexts.PdsaRoundCtx;
 import dcop.pdsa.contexts.interfaces.IPdsaAgent;
+import dcop.pdsa.OMessage;
 import crypto.mpc.barrier.OBarrierCtx;
 import crypto.mpc.barrier.OBarrierNotifyMsg;
 import crypto.mpc.interfaces.*;
@@ -87,7 +88,7 @@ public class Agent extends Node implements
 		
 	}
 
-	
+			
 	/////////////////////////////////
 	// Agent Configuration Members //
 	/////////////////////////////////
@@ -170,6 +171,7 @@ public class Agent extends Node implements
 		setup();
 		
 		this.constraints = new HashMap<Integer, int[][]>();
+		this.connections = new HashMap<Integer, Integer>();
 		this.neighbors = new Vector<IDcopAgent>();
 		
 		this.contextMgr = new HashMap<String, IContext>();
@@ -208,8 +210,9 @@ public class Agent extends Node implements
 	}
 	
 	// COP info
-	private Map<Integer, int[][]> constraints;
+	private Map<Integer, int[][]> constraints;	
 	private Vector<IDcopAgent> neighbors;
+	public Map<Integer, Integer> connections;
 	private int shamirThreshold;
 
 	public Vector<IDcopAgent> Neighborhood(){
@@ -313,8 +316,13 @@ public class Agent extends Node implements
 		
 	}
 	
-	public void addConnectionConstraints(Agent other, int[][] constraints) {
+	public void addConnectionConstraints(Agent other, int[][] constraints, boolean zero) {
+		
 		this.constraints.put(other.ID, constraints);
+		
+		int connected =  zero ? 1 : 0;
+		this.connections.put(other.ID, connected);
+		
 		neighbors.add(other);
 		// only one agent needs to add a bi connection, let it be the agent with higher id  
 		if (ID > other.ID) {

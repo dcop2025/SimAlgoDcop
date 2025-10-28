@@ -22,7 +22,7 @@ public class OMessage extends Message{
      * @param the Agent to handle the message, should be the one that calls the action method
      * @param the node that send the message 
      */	
-	void action(IShamirAgent agent, Node sender) {
+	public void action(IShamirAgent agent, Node sender) {
 		msg.action(agent, sender.ID);
 	}
 
