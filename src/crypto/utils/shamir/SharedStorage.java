@@ -43,7 +43,7 @@ public class SharedStorage {
 		storage.put(refKey, ref);
 		if (refBits == null) {
 			return;
-		}
+		}		
 		for (int i = 0; i < refBits.length; i++) {			
 			storage.put(bitKey(refKey, i), refBits[i]);
 		}
